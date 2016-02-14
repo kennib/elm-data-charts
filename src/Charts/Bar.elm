@@ -7,6 +7,7 @@ import Html.Attributes as Html exposing (style)
 import Chart.Layout exposing (..)
 import Chart.Data exposing (..)
 import Chart.Axis as Axis exposing (axis)
+import Chart.Scale as Scale
 
 chart : Int -> Int -> List (Categorical a) -> List (Number b) -> Svg
 chart w h xs ys = let
@@ -20,7 +21,7 @@ chart w h xs ys = let
             [Html.style <| chartStyle width height]
             [ axis Axis.Left layout <| NumberData ys
             , axis Axis.Bottom layout <| CategoricalData xs
-            , bars Vertical layout <| List.map (\(Number y) -> y.number y.datum) ys
+            , bars Vertical layout xs ys
             ] 
 
 chartStyle : Float -> Float -> List (String, String)
@@ -31,10 +32,8 @@ chartStyle width height =
 
 type BarOrientation = Vertical | Horizontal
 
-bars : BarOrientation -> Layout -> List Float -> Svg
-bars orient layout values = let
-        min = Maybe.withDefault 0 <| List.minimum values
-        max = Maybe.withDefault 1 <| List.maximum values
+bars : BarOrientation -> Layout -> List (Categorical a) -> List (Number b) -> Svg
+bars orient layout xs ys = let
         axisWidth = Maybe.withDefault 0 <| Maybe.map .width  layout.axis
         axisHeight = Maybe.withDefault 0 <| Maybe.map .height layout.axis
         xAxisSize = case orient of
@@ -49,15 +48,18 @@ bars orient layout values = let
         yAxisMargin = case orient of
             Vertical   -> axisHeight
             Horizontal -> axisWidth
-        ticks = List.indexedMap (\i _ -> xAxisMargin + (xAxisSize * (toFloat i)/(toFloat <| List.length values))) values 
-        barHeights = List.map (\value -> yAxisSize * (value - min) / (max - min)) values
+        xScale = Scale.categorical xs (xAxisMargin, xAxisMargin + xAxisSize)
+        yScale = Scale.number ys (0, yAxisSize)
+
+        ticks = List.filterMap xScale xs
+        barHeights = List.filterMap yScale ys
         barWidth = case ticks of
             pos0::pos1::_ -> pos1 - pos0
             _ -> xAxisSize
 
         xPos = case orient of
             Vertical   -> ticks
-            Horizontal -> List.repeat (List.length values) <| yAxisMargin
+            Horizontal -> List.repeat (List.length ys) <| yAxisMargin
         yPos = case orient of
             Vertical   -> List.map (\value -> yAxisMargin + yAxisSize - value) barHeights
             Horizontal -> ticks
