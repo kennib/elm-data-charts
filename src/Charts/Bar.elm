@@ -1,9 +1,11 @@
 module Charts.Bar (chart) where
 
-import Chart.Data exposing (..)
-import Svg exposing (Svg, svg, g, rect, text', text)
+import Svg exposing (Svg, svg, g, rect)
 import Svg.Attributes exposing (..)
 import Html.Attributes as Html exposing (style)
+
+import Chart.Data exposing (..)
+import Chart.Axis as Axis exposing (axis)
 
 chart : Int -> Int -> List (Categorical a) -> List (Number b) -> Svg
 chart w h xs ys = let
@@ -15,8 +17,8 @@ chart w h xs ys = let
     in
         svg
             [Html.style <| chartStyle width height]
-            [ axis Left height axisWidth axisHeight <| List.map toString [Maybe.withDefault 0 <| List.minimum values, Maybe.withDefault 1 <| List.maximum values]
-            , axis Bottom width axisHeight axisWidth <| List.map (\(Categorical x) -> x.label x.datum) xs
+            [ axis Axis.Left height axisWidth axisHeight <| List.map toString [Maybe.withDefault 0 <| List.minimum values, Maybe.withDefault 1 <| List.maximum values]
+            , axis Axis.Bottom width axisHeight axisWidth <| List.map (\(Categorical x) -> x.label x.datum) xs
             , bars Vertical (width-axisWidth) (height-axisHeight) axisWidth <| List.map (\(Number y) -> y.number y.datum) ys
             ] 
 
@@ -52,35 +54,3 @@ bar orient size barWidth pos value = case orient of
         , height <| toString barWidth
         , y <| toString pos
         ] []
-
-type AxisOrientation = Left | Right | Top | Bottom
-
-axis : AxisOrientation -> Float -> Float -> Float -> List String -> Svg
-axis orient size width pos labels = let
-        textSize = width/4
-        sides = List.repeat (List.length labels)
-            <| case orient of
-                Left -> 0
-                Right -> size - width
-                Top -> 0
-                Bottom -> size - width
-        ticks = List.indexedMap (\i _ -> pos + (size * (toFloat i)/(toFloat <| List.length labels))) labels 
-        xPos = case orient of
-            Left -> sides
-            Right -> sides
-            Top -> ticks
-            Bottom -> ticks 
-        yPos = case orient of
-            Left -> List.reverse ticks
-            Right -> List.reverse ticks
-            Top -> sides
-            Bottom -> sides
-    in
-        g []
-        <| List.map3 (axisLabel textSize)
-            xPos yPos labels
-
-axisLabel : Float -> Float -> Float -> String -> Svg
-axisLabel size xPos yPos label = text'
-    [x <| toString xPos, y <| toString yPos, fontSize <| toString size]
-    [text label]
