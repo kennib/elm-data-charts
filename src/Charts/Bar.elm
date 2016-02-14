@@ -33,6 +33,8 @@ type BarOrientation = Vertical | Horizontal
 
 bars : BarOrientation -> Layout -> List Float -> Svg
 bars orient layout values = let
+        min = Maybe.withDefault 0 <| List.minimum values
+        max = Maybe.withDefault 1 <| List.maximum values
         axisWidth = Maybe.withDefault 0 <| Maybe.map .width  layout.axis
         axisHeight = Maybe.withDefault 0 <| Maybe.map .height layout.axis
         xAxisSize = case orient of
@@ -48,6 +50,7 @@ bars orient layout values = let
             Vertical   -> axisHeight
             Horizontal -> axisWidth
         ticks = List.indexedMap (\i _ -> xAxisMargin + (xAxisSize * (toFloat i)/(toFloat <| List.length values))) values 
+        barHeights = List.map (\value -> yAxisSize * (value - min) / (max - min)) values
         barWidth = case ticks of
             pos0::pos1::_ -> pos1 - pos0
             _ -> xAxisSize
@@ -56,12 +59,12 @@ bars orient layout values = let
             Vertical   -> ticks
             Horizontal -> List.repeat (List.length values) <| yAxisMargin
         yPos = case orient of
-            Vertical   -> List.map (\value -> yAxisMargin + yAxisSize - value) values
+            Vertical   -> List.map (\value -> yAxisMargin + yAxisSize - value) barHeights
             Horizontal -> ticks
     in
         g []
         <| List.map3 (bar barWidth)
-            xPos yPos values
+            xPos yPos barHeights
 
 bar : Float -> Float -> Float -> Float -> Svg
 bar barWidth xPos yPos value = rect
