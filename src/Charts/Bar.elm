@@ -9,16 +9,13 @@ import Chart.Data exposing (..)
 import Chart.Axis as Axis exposing (axis)
 import Chart.Scale as Scale
 
-chart : Int -> Int -> List (Categorical a) -> List (Number b) -> Svg
-chart w h xs ys = let
-        width = toFloat w
-        height = toFloat h
-        layout = {defaultLayout | width = width, height = height}
+chart : Layout -> List (Categorical a) -> List (Number b) -> Svg
+chart layout xs ys = let
         axisWidth = Maybe.withDefault 0 <| Maybe.map .width  layout.axis
         axisHeight = Maybe.withDefault 0 <| Maybe.map .height layout.axis
     in
         svg
-            [Html.style <| chartStyle width height]
+            [Html.style <| chartStyle layout.width layout.height]
             [ axis Axis.Left layout <| NumberData ys
             , axis Axis.Bottom layout <| CategoricalData xs
             , bars Vertical layout xs ys
