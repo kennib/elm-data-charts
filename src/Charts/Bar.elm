@@ -4,6 +4,7 @@ import Svg exposing (Svg, svg, g, rect)
 import Svg.Attributes exposing (..)
 import Html.Attributes as Html exposing (style)
 
+import Chart.Layout exposing (..)
 import Chart.Data exposing (..)
 import Chart.Axis as Axis exposing (axis)
 
@@ -11,14 +12,15 @@ chart : Int -> Int -> List (Categorical a) -> List (Number b) -> Svg
 chart w h xs ys = let
         width = toFloat w
         height = toFloat h
-        axisHeight = 40
-        axisWidth = 60
+        layout = {defaultLayout | width = width, height = height}
+        axisWidth = Maybe.withDefault 0 <| Maybe.map .width  layout.axis
+        axisHeight = Maybe.withDefault 0 <| Maybe.map .height layout.axis
     in
         svg
             [Html.style <| chartStyle width height]
-            [ axis Axis.Left (height-axisHeight*2) axisWidth axisHeight <| NumberData ys
-            , axis Axis.Bottom (width-axisWidth) axisHeight axisWidth <| CategoricalData xs
-            , bars Vertical (width-axisWidth) (height-axisHeight) axisWidth <| List.map (\(Number y) -> y.number y.datum) ys
+            [ axis Axis.Left layout <| NumberData ys
+            , axis Axis.Bottom layout <| CategoricalData xs
+            , bars Vertical layout <| List.map (\(Number y) -> y.number y.datum) ys
             ] 
 
 chartStyle : Float -> Float -> List (String, String)
@@ -29,27 +31,42 @@ chartStyle width height =
 
 type BarOrientation = Vertical | Horizontal
 
-bars : BarOrientation -> Float -> Float -> Float -> List Float -> Svg
-bars orient size width pos values = let
-        ticks = List.indexedMap (\i _ -> pos + (size * (toFloat i)/(toFloat <| List.length values))) values 
+bars : BarOrientation -> Layout -> List Float -> Svg
+bars orient layout values = let
+        axisWidth = Maybe.withDefault 0 <| Maybe.map .width  layout.axis
+        axisHeight = Maybe.withDefault 0 <| Maybe.map .height layout.axis
+        xAxisSize = case orient of
+            Vertical   -> layout.width  - axisWidth * 2
+            Horizontal -> layout.height - axisHeight * 2
+        xAxisMargin = case orient of
+            Vertical   -> axisWidth
+            Horizontal -> axisHeight
+        yAxisSize = case orient of
+            Vertical   -> layout.height - axisHeight * 2
+            Horizontal -> layout.width  - axisWidth * 2
+        yAxisMargin = case orient of
+            Vertical   -> axisHeight
+            Horizontal -> axisWidth
+        ticks = List.indexedMap (\i _ -> xAxisMargin + (xAxisSize * (toFloat i)/(toFloat <| List.length values))) values 
         barWidth = case ticks of
             pos0::pos1::_ -> pos1 - pos0
-            _ -> width
+            _ -> xAxisSize
+
+        xPos = case orient of
+            Vertical   -> ticks
+            Horizontal -> List.repeat (List.length values) <| yAxisMargin
+        yPos = case orient of
+            Vertical   -> List.map (\value -> yAxisMargin + yAxisSize - value) values
+            Horizontal -> ticks
     in
         g []
-        <| List.map2 (bar orient size barWidth)
-            ticks values
+        <| List.map3 (bar barWidth)
+            xPos yPos values
 
-bar : BarOrientation -> Float -> Float -> Float -> Float -> Svg
-bar orient size barWidth pos value = case orient of
-    Vertical -> rect
-        [ height <| toString value
-        , width <| toString barWidth
-        , x <| toString pos
-        , y <| toString <| size - value
-        ] []
-    Horizontal -> rect
-        [ width <| toString value
-        , height <| toString barWidth
-        , y <| toString pos
-        ] []
+bar : Float -> Float -> Float -> Float -> Svg
+bar barWidth xPos yPos value = rect
+    [ height <| toString value
+    , width <| toString barWidth
+    , x <| toString xPos
+    , y <| toString <| yPos
+    ] []

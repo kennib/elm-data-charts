@@ -3,44 +3,70 @@ module Chart.Axis (Orientation(..), axis) where
 import Svg exposing (Svg, svg, g, text', text)
 import Svg.Attributes exposing (..)
 
+import Chart.Layout exposing (..)
 import Chart.Data exposing (..)
 
 type Orientation = Left | Right | Top | Bottom
 
-axis : Orientation -> Float -> Float -> Float -> Data a -> Svg
-axis orient size width pos data = let
-        textSize = width/4
+axis : Orientation -> Layout -> Data a -> Svg
+axis orient layout data = let
         labels = dataLabels data
-        sides = List.repeat (List.length labels)
-            <| case orient of
-                Left -> 0
-                Right -> size
-                Top -> width/2
-                Bottom -> size + width/2
         numTicks = case data of
             NumberData _ -> List.length labels - 1
             CategoricalData _ -> List.length labels
-        ticks = List.indexedMap (\i _ -> pos + (size * (toFloat i)/toFloat numTicks)) labels
+        ticks = List.indexedMap (\i _ -> axisMargin + (axisSize * (toFloat i)/toFloat numTicks)) labels
+
+        textSize = axisWidth / 4
+        textAlign = case orient of
+            Left   -> "end"
+            Right  -> "start"
+            Top    -> "start"
+            Bottom -> "start"
+
+        axisWidth = case orient of
+            Left   -> Maybe.withDefault 0 <| Maybe.map .width  layout.axis
+            Right  -> Maybe.withDefault 0 <| Maybe.map .width  layout.axis
+            Top    -> Maybe.withDefault 0 <| Maybe.map .height layout.axis
+            Bottom -> Maybe.withDefault 0 <| Maybe.map .height layout.axis
+        axisMargin = case orient of
+            Left   -> Maybe.withDefault 0 <| Maybe.map .height layout.axis
+            Right  -> Maybe.withDefault 0 <| Maybe.map .height layout.axis
+            Top    -> Maybe.withDefault 0 <| Maybe.map .width  layout.axis
+            Bottom -> Maybe.withDefault 0 <| Maybe.map .width  layout.axis
+        axisSize = case orient of
+            Left   -> layout.height - axisMargin * 2
+            Right  -> layout.height - axisMargin * 2
+            Top    -> layout.width - axisMargin * 2
+            Bottom -> layout.width - axisMargin * 2
+
+        axisPos = List.repeat (List.length labels)
+            <| case orient of
+                Left   -> axisWidth
+                Right  -> layout.width - axisWidth
+                Top    -> axisWidth * 3/4
+                Bottom -> layout.height - axisWidth * 3/4
+
         xPos = case orient of
-            Left -> sides
-            Right -> sides
-            Top -> ticks
+            Left   -> axisPos
+            Right  -> axisPos
+            Top    -> ticks
             Bottom -> ticks 
         yPos = case orient of
-            Left -> List.reverse ticks
-            Right -> List.reverse ticks
-            Top -> sides
-            Bottom -> sides
+            Left   -> List.reverse ticks
+            Right  -> List.reverse ticks
+            Top    -> axisPos
+            Bottom -> axisPos
     in
         g []
-        <| List.map3 (axisLabel textSize)
+        <| List.map3 (axisLabel textAlign textSize)
             xPos yPos labels
 
-axisLabel : Float -> Float -> Float -> String -> Svg
-axisLabel size xPos yPos label = text'
+axisLabel : String -> Float -> Float -> Float -> String -> Svg
+axisLabel align size xPos yPos label = text'
     [ x <| toString xPos
     , y <| toString yPos
     , fontSize <| toString size
+    , textAnchor align
     ] [text label]
 
 dataLabels : Data a -> List String
