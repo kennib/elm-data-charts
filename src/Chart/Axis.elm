@@ -3,18 +3,24 @@ module Chart.Axis (Orientation(..), axis) where
 import Svg exposing (Svg, svg, g, text', text)
 import Svg.Attributes exposing (..)
 
+import Chart.Data exposing (..)
+
 type Orientation = Left | Right | Top | Bottom
 
-axis : Orientation -> Float -> Float -> Float -> List String -> Svg
-axis orient size width pos labels = let
+axis : Orientation -> Float -> Float -> Float -> Data a -> Svg
+axis orient size width pos data = let
         textSize = width/4
+        labels = dataLabels data
         sides = List.repeat (List.length labels)
             <| case orient of
                 Left -> 0
-                Right -> size - width
-                Top -> 0
-                Bottom -> size - width
-        ticks = List.indexedMap (\i _ -> pos + (size * (toFloat i)/(toFloat <| List.length labels))) labels 
+                Right -> size
+                Top -> width/2
+                Bottom -> size + width/2
+        numTicks = case data of
+            NumberData _ -> List.length labels - 1
+            CategoricalData _ -> List.length labels
+        ticks = List.indexedMap (\i _ -> pos + (size * (toFloat i)/toFloat numTicks)) labels
         xPos = case orient of
             Left -> sides
             Right -> sides
@@ -32,5 +38,23 @@ axis orient size width pos labels = let
 
 axisLabel : Float -> Float -> Float -> String -> Svg
 axisLabel size xPos yPos label = text'
-    [x <| toString xPos, y <| toString yPos, fontSize <| toString size]
-    [text label]
+    [ x <| toString xPos
+    , y <| toString yPos
+    , fontSize <| toString size
+    ] [text label]
+
+dataLabels : Data a -> List String
+dataLabels data = case data of
+    NumberData values -> numberLabels values
+    CategoricalData values -> categoricalLabels values
+
+numberLabels : List (Number a) -> List String
+numberLabels data = let
+        values = List.map (\(Number x) -> x.number x.datum) data
+        min = Maybe.withDefault 0 <| List.minimum values
+        max = Maybe.withDefault 1 <| List.maximum values
+    in
+        List.map toString [min, max]
+
+categoricalLabels : List (Categorical a) -> List String
+categoricalLabels data = List.map (\(Categorical x) -> x.label x.datum) data

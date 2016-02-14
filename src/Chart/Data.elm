@@ -1,9 +1,12 @@
 module Chart.Data
-    ( Number(..)
+    ( Data(..)
+    , Number(..)
     , Categorical(..)
     , integer
     , categoricalString
     ) where
+
+type Data a = NumberData (List (Number a)) | CategoricalData (List (Categorical a))
 
 type Number a = Number
     { datum : a

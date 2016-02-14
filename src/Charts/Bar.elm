@@ -13,12 +13,11 @@ chart w h xs ys = let
         height = toFloat h
         axisHeight = 40
         axisWidth = 60
-        values = List.map (\(Number y) -> y.number y.datum) ys
     in
         svg
             [Html.style <| chartStyle width height]
-            [ axis Axis.Left height axisWidth axisHeight <| List.map toString [Maybe.withDefault 0 <| List.minimum values, Maybe.withDefault 1 <| List.maximum values]
-            , axis Axis.Bottom width axisHeight axisWidth <| List.map (\(Categorical x) -> x.label x.datum) xs
+            [ axis Axis.Left (height-axisHeight*2) axisWidth axisHeight <| NumberData ys
+            , axis Axis.Bottom (width-axisWidth) axisHeight axisWidth <| CategoricalData xs
             , bars Vertical (width-axisWidth) (height-axisHeight) axisWidth <| List.map (\(Number y) -> y.number y.datum) ys
             ] 
 
