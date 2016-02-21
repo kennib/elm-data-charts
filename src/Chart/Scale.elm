@@ -10,7 +10,9 @@ linear : Range Float -> Range Float -> Float -> Maybe Float
 linear (domainMin, domainMax) (rangeMin, rangeMax) value = let
         rangeValue = rangeMin + (rangeMax - rangeMin) * (value - domainMin) / (domainMax - domainMin)
     in
-        if value >= min domainMin domainMax && value < max domainMin domainMax then
+        if domainMax == domainMin then
+            Nothing
+        else if value >= min domainMin domainMax && value < max domainMin domainMax then
             Just rangeValue
         else
             Just rangeValue
