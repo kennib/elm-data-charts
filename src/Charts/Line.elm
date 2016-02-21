@@ -54,8 +54,20 @@ lines layout categories points = let
             points'
 
 line : List (Float, Float) -> Svg
-line points' = polyline
-    [ points <| Line.polyline points'
-    , fill "none"
+line points = g []
+    <| mapJoining linePart points
+
+linePart : (Float, Float) -> (Float, Float) -> Svg
+linePart (x1', y1') (x2', y2') = Svg.line
+    [ x1 <| toString x1'
+    , y1 <| toString y1'
+    , x2 <| toString x2'
+    , y2 <| toString y2'
     , stroke "black"
     ] []
+
+mapJoining : (a -> a -> b) -> List a -> List b
+mapJoining f list = let
+        tail = List.drop 1 list
+    in
+        List.map2 f list tail
