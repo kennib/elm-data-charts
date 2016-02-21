@@ -1,4 +1,4 @@
-module Chart.Scale (linear, ordinal, quantile, number, categorical) where
+module Chart.Scale (linear, ordinal, quantile, number, categorical, ordinalCategories, categoryColors) where
 
 import List.Extra as List
 
@@ -41,6 +41,23 @@ number numbers range (Number x) = let
 
 categorical : List (Categorical a) -> Range Float -> Categorical a -> Maybe Float
 categorical categories range category = ordinal categories range category
+
+ordinalCategories : List (Categorical a) -> List (Categorical b) -> Categorical a -> Maybe (Categorical b)
+ordinalCategories domain range value =
+    List.elemIndex value domain
+        `Maybe.andThen`
+    \index -> List.getAt range (index % List.length range)
+
+categoryColors : List (Categorical a) -> Categorical a -> Maybe String
+categoryColors categories = let
+        colorOf (Categorical x) = x.label x.datum
+    in
+        Maybe.map colorOf <<
+            (ordinalCategories categories
+            <| List.map Data.categoricalString colors)
+
+colors : List String
+colors = ["red", "green", "blue", "gold", "salmon", "silver", "purple"]
 
 listRange : List comparable -> Maybe (Range comparable)
 listRange list = let

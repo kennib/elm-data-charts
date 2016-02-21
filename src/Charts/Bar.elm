@@ -49,6 +49,7 @@ bars orient layout xs ys = let
         yScale = Scale.number ys (0, yAxisSize)
 
         ticks = List.filterMap xScale xs
+        colors = List.map (Maybe.withDefault "grey" << Scale.categoryColors xs) xs
         barHeights = List.filterMap yScale ys
         barWidth = case ticks of
             pos0::pos1::_ -> pos1 - pos0
@@ -62,13 +63,14 @@ bars orient layout xs ys = let
             Horizontal -> ticks
     in
         g []
-        <| List.map3 (bar barWidth)
-            xPos yPos barHeights
+        <| List.map4 (bar barWidth)
+            xPos yPos colors barHeights
 
-bar : Float -> Float -> Float -> Float -> Svg
-bar barWidth xPos yPos value = rect
+bar : Float -> Float -> Float -> String -> Float -> Svg
+bar barWidth xPos yPos color value = rect
     [ height <| toString value
     , width <| toString barWidth
     , x <| toString xPos
     , y <| toString <| yPos
+    , fill color
     ] []

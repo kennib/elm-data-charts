@@ -47,23 +47,24 @@ lines layout categories points = let
         yScale = Scale.number ys (0, yAxisSize)
         scale (x,y) = (Maybe.withDefault 0 <| xScale x, Maybe.withDefault 0 <| yScale y)
 
+        colors = List.map (Maybe.withDefault "grey" << Scale.categoryColors categories) categories
         points' = List.map (List.map scale) points
     in
         g []
-        <| List.map line
-            points'
+        <| List.map2 line
+            colors points'
 
-line : List (Float, Float) -> Svg
-line points = g []
-    <| mapJoining linePart points
+line : String -> List (Float, Float) -> Svg
+line color points = g []
+    <| mapJoining (linePart color) points
 
-linePart : (Float, Float) -> (Float, Float) -> Svg
-linePart (x1', y1') (x2', y2') = Svg.line
+linePart : String -> (Float, Float) -> (Float, Float) -> Svg
+linePart color (x1', y1') (x2', y2') = Svg.line
     [ x1 <| toString x1'
     , y1 <| toString y1'
     , x2 <| toString x2'
     , y2 <| toString y2'
-    , stroke "black"
+    , stroke color
     ] []
 
 mapJoining : (a -> a -> b) -> List a -> List b
