@@ -2,6 +2,7 @@ module Chart.Data
     ( Data(..)
     , Number(..)
     , Categorical(..)
+    , float
     , integer
     , categoricalString
     ) where
@@ -16,6 +17,12 @@ type Number a = Number
 type Categorical a = Categorical
     { datum : a
     , label : a -> String
+    }
+
+float : Float -> Number Float
+float x = Number
+    { datum = x
+    , number = identity
     }
 
 integer : Int -> Number Int
