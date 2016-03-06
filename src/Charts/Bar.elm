@@ -6,7 +6,7 @@ import Html.Attributes as Html exposing (style)
 
 import Chart.Layout exposing (..)
 import Chart.Data exposing (..)
-import Chart.Axis as Axis exposing (axis)
+import Chart.Axis as Axis exposing (axis, numberLabels, categoricalLabels)
 import Chart.Scale as Scale
 
 chart : Layout -> List (Categorical a) -> List (Number b) -> Svg
@@ -16,8 +16,8 @@ chart layout xs ys = let
     in
         svg
             [Html.style <| chartStyle layout.width layout.height]
-            [ axis Axis.Left layout <| NumberData ys
-            , axis Axis.Bottom layout <| CategoricalData xs
+            [ axis Axis.Left layout {data = ys, tickLabels = numberLabels}
+            , axis Axis.Bottom layout {data = xs, tickLabels = categoricalLabels}
             , bars Vertical layout xs ys
             ] 
 

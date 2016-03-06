@@ -2,7 +2,7 @@ module Chart.Scale (linear, ordinal, quantile, number, categorical, ordinalCateg
 
 import List.Extra as List
 
-import Chart.Data as Data exposing (Data(..), Number(..), Categorical(..))
+import Chart.Data as Data exposing (Number, Categorical)
 
 type alias Range a = (a, a)
 
@@ -33,11 +33,11 @@ ordinal domain range value = let
         index `Maybe.andThen` linear domainRange range
 
 number : List (Number a) -> Range Float -> Number a -> Maybe Float
-number numbers range (Number x) = let
-        domain = listRange <| List.map (\(Number x) -> x.number x.datum) numbers 
-        value = x.number x.datum
+number numbers range x = let
+        domain = listRange <| List.map value numbers
+        value x = x.number x.datum
     in
-        domain `Maybe.andThen` \domain -> linear domain range value 
+        domain `Maybe.andThen` \domain -> linear domain range (value x)
 
 categorical : List (Categorical a) -> Range Float -> Categorical a -> Maybe Float
 categorical categories range category = ordinal categories range category
@@ -50,7 +50,7 @@ ordinalCategories domain range value =
 
 categoryColors : List (Categorical a) -> Categorical a -> Maybe String
 categoryColors categories = let
-        colorOf (Categorical x) = x.label x.datum
+        colorOf x = x.label x.datum
     in
         Maybe.map colorOf <<
             (ordinalCategories categories

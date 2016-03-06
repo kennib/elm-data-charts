@@ -1,4 +1,4 @@
-module Chart.Axis (Orientation(..), axis) where
+module Chart.Axis (Orientation(..), axis, numberLabels, categoricalLabels) where
 
 import List.Extra as List
 import Svg exposing (Svg, svg, g, text', text)
@@ -10,11 +10,16 @@ import Chart.Scale as Scale
 
 type Orientation = Left | Right | Top | Bottom
 
-axis : Orientation -> Layout -> Data a -> Svg
-axis orient layout data = let
-        labelTicks = dataLabels axisMargin axisSize data
-        labels = List.map fst labelTicks
-        ticks = List.map snd labelTicks
+type alias Axis a =
+    { data : List a
+    , tickLabels : Float -> Float -> List a -> List (Float, String)
+    }
+
+axis : Orientation -> Layout -> Axis a -> Svg
+axis orient layout axis' = let
+        tickLabels = axis'.tickLabels axisMargin axisSize axis'.data
+        ticks = List.map fst tickLabels
+        labels = List.map snd tickLabels
 
         textSize = axisWidth / 4
         textAlign = case orient of
@@ -69,23 +74,18 @@ axisLabel align size xPos yPos label = text'
     , textAnchor align
     ] [text label]
 
-dataLabels : Float -> Float -> Data a -> List (String, Float)
-dataLabels pos size data = case data of
-    NumberData values -> numberLabels pos size values
-    CategoricalData values -> categoricalLabels pos size values
-
-numberLabels : Float -> Float -> List (Number a) -> List (String, Float)
+numberLabels : Float -> Float -> List (Number a) -> List (Float, String)
 numberLabels pos size data = let
         scale value = Maybe.withDefault 0 <| Scale.number data (pos, pos+size) value
-        min = List.minimumBy (\(Number x) -> x.number x.datum) data
-        max = List.maximumBy (\(Number x) -> x.number x.datum) data
+        min = List.minimumBy (\x -> x.number x.datum) data
+        max = List.maximumBy (\x -> x.number x.datum) data
     in
         case (min, max) of
-            (Just min, Just max) -> List.map (\(Number x) -> (toString <| x.number x.datum, scale <| Number x)) [min, max]
+            (Just min, Just max) -> List.map (\x -> (scale x, toString <| x.number x.datum)) [min, max]
             _ -> []
 
-categoricalLabels : Float -> Float -> List (Categorical a) -> List (String, Float)
+categoricalLabels : Float -> Float -> List (Categorical a) -> List (Float, String)
 categoricalLabels pos size data = let
         scale value = Maybe.withDefault 0 <| Scale.categorical data (pos, pos+size) value
     in
-        List.map (\(Categorical x) -> (x.label x.datum, scale <| Categorical x)) data
+        List.map (\x -> (scale x, x.label x.datum)) data
