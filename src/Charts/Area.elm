@@ -8,7 +8,7 @@ import Chart.Layout exposing (..)
 import Chart.Data exposing (..)
 import Chart.Axis as Axis exposing (axis, numberLabels, categoricalLabels)
 import Chart.Scale as Scale
-import Chart.Line as Line
+import Chart.Shape as Shape
 
 chart : Layout -> List (Categorical a) -> List (List (Number b, Number b)) -> Svg
 chart layout categories points = let
@@ -56,5 +56,5 @@ areas layout categories points = let
 area : Float -> String -> List (Float, Float) -> Svg
 area baseline color points = Svg.path
     [ fill color
-    , d <| Line.area baseline points
+    , d <| Shape.area baseline points
     ] []

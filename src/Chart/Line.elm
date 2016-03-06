@@ -1,4 +1,4 @@
-module Chart.Line (polyline, area) where
+module Chart.Line (polyline, line, arc, moveTo) where
 
 import String
 
@@ -7,18 +7,24 @@ polyline points = String.join " "
     <| List.map (\(x,y) -> toString x ++ "," ++ toString y)
     <| points
 
-area : Float -> List (Float, Float) -> String
-area baseline points = let
-        firstX = Maybe.withDefault 0 <| Maybe.map fst <| List.head points
-        lastX = Maybe.withDefault 0 <| Maybe.map fst <| List.head <| List.drop (List.length points - 1) points
-        point (x,y) = toString x ++ " " ++ toString y
-        start = "M " ++ point (firstX, baseline)
-        end = point (lastX, baseline) ++ " Z"
-        points' = String.join " L "
-            <| List.map point
-            <| points
+line : Float -> Float -> String
+line x y = let
+        positions = List.map toString [x, y]
     in
-        if points /= [] then
-            start ++ " L " ++ points' ++ " L " ++ end
-        else
-            ""
+        "L " ++ String.join " " positions
+
+arc : Float -> Float -> Float -> Float -> Float -> Bool -> Bool -> String
+arc rx ry rotation x' y' largeArc sweep = let
+        largeArcFlag = if largeArc then 1 else 0
+        sweepFlag = if sweep then 1 else 0
+    in
+        String.join " "
+        (  ["A"]
+        ++ List.map toString [rx, ry, rotation, largeArcFlag, sweepFlag, x', y']
+        )
+
+moveTo : Float -> Float -> String
+moveTo x y = let
+        positions = List.map toString [x, y]
+    in
+        "M " ++ String.join " " positions
