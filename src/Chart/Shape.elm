@@ -28,16 +28,21 @@ arc x y startAngle endAngle innerRadius outerRadius = let
         outery = y - ody 
         outerdx = x + odx'
         outerdy = y - ody'
+
         (dx, dy) = fromPolar (innerRadius, degrees startAngle)
         (dx', dy') = fromPolar (innerRadius, degrees endAngle)
         innerx = x + dx
         innery = y - dy 
         innerdx = x + dx'
         innerdy = y - dy'
+
+        largeArc = abs (endAngle - startAngle) > 180
+        sweep = startAngle > endAngle
+
         start = Line.moveTo outerx outery
-        outer = Line.arc outerRadius outerRadius 0 outerdx outerdy False True
+        outer = Line.arc outerRadius outerRadius 0 outerdx outerdy largeArc sweep
         line =  Line.line innerdx innerdy
-        inner = Line.arc innerRadius innerRadius 0 innerx innery False False
+        inner = Line.arc innerRadius innerRadius 0 innerx innery largeArc (not sweep)
         end = Line.line outerx outery
     in
         String.join " " [start, outer, line, inner, end]
