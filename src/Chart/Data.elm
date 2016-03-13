@@ -6,6 +6,8 @@ module Chart.Data
     , float
     , integer
     , categoricalString
+    , number
+    , label
     ) where
 
 type alias Data a =
@@ -42,3 +44,9 @@ categoricalString x =
     { datum = x
     , label = identity
     }
+
+number : Number a -> Float
+number datum = datum.number datum.datum
+
+label : Categorical a -> String
+label datum = datum.label datum.datum

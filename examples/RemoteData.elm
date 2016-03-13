@@ -1,5 +1,6 @@
 import Chart
 import Chart.Data as Data
+import Chart.Data.Csv exposing ((:=))
 
 import Html exposing (Html)
 import Html.Events
@@ -12,67 +13,61 @@ import List.Extra as List
 import String
 
 main : Signal Html
-main = Signal.map3 view
-    divisions
+main = Signal.map2 view
     division.signal
-    percentage
+    data.signal
 
-view : Result String (List String) -> Maybe String -> Maybe Float -> Html
-view divisions division' percentage = Html.div []
-    [ case divisions of
-        Ok divisions -> Html.div []
-            [ Html.select [Html.Events.on "change" Html.Events.targetValue (Signal.message division.address << Just)]
-                <| [Html.option [] [Html.text  "Pick a division"]]
-                ++ List.map (\division -> Html.option [] [Html.text division]) divisions
-            ]
-        Err error ->
-            Html.p [] [Html.text error]
-    , case (division', percentage) of
-        (Just division, Just percentage) -> chart division percentage
-        (Nothing, _) -> Html.p [] [Html.text "Choose a division"]
-        (Just _, Nothing) -> Html.p [] [Html.text "Data is missing"]
-    ]
+view : Maybe String -> Result String (List (Election)) -> Html
+view selectedDivision data = 
+    let
+        election elections division = List.find (\election -> Data.label election.division == division) elections
+    in
+        Html.div []
+        [ case data of
+            Ok elections -> Html.div []
+                [ Html.select [Html.Events.on "change" Html.Events.targetValue (Signal.message division.address << Just)]
+                    <| [Html.option [] [Html.text  "Pick a division"]]
+                    ++ List.map (\election -> Html.option [] [Html.text <| Data.label election.division]) elections
+                , case selectedDivision `Maybe.andThen` election elections of
+                    Just election -> case election.alp of
+                        Just percentage -> chart election.division percentage
+                        Nothing -> Html.p [] [Html.text "Results are missing"]
+                    Nothing -> Html.p [] [Html.text "Election is missing"]
+                ]
+            Err error ->
+                Html.p [] [Html.text error]
+        ]
 
-chart : String -> Float -> Svg
+chart : Data.Categorical String -> Data.Number Float -> Svg
 chart label percentage = Chart.gauge
     Chart.defaultLayout
-    (Data.categoricalString label)
+    label
     (Data.float 0, Data.float 100)
-    (Data.float percentage)
+    percentage
 
 division : Signal.Mailbox (Maybe String)
 division = Signal.mailbox Nothing
 
-data : Signal (Maybe (List (List String)))
-data = Signal.map (Result.toMaybe << Result.map (.records)) 
-    <| results.signal
+csvUrl = "https://raw.githubusercontent.com/jumpinjackie/cesium-dotnet-examples/master/ElectionCzml/2013-HouseTppByDivisionDownload-17496.csv"
 
-divisionData : Signal (Maybe (List String))
-divisionData = Signal.map2 (\division data ->
-    case (division, data) of
-        (Just division, Just data) -> List.find (List.member division) data
-        _ -> Nothing)
-    division.signal data
+port request : Signal (Task () ())
+port request = Signal.constant (Chart.Data.Csv.fetch csvUrl elections)
+    |> Signal.map (\task -> Task.toResult task `Task.andThen` Signal.send data.address)
 
-percentage : Signal (Maybe Float)
-percentage = Signal.map (\divisionData ->
-    divisionData
-    `Maybe.andThen` (\data -> List.getAt data 5)
-    `Maybe.andThen` (Result.toMaybe << String.toFloat))
-    <| divisionData
+data : Signal.Mailbox (Result String (List Election))
+data = Signal.mailbox (Err "Data hasn't loaded yet")
 
-divisions : Signal (Result String (List String))
-divisions = Signal.map (Result.map <| (.records) >> List.filterMap List.head)
-    <| results.signal
+elections : Chart.Data.Csv.Decoder Election
+elections =
+       Chart.Data.Csv.map2 (\percentage data -> {data | alp = percentage})
+       ("Australian Labor Party Percentage" :=  (String.toFloat >> Result.toMaybe >> Maybe.map Data.float))
+    <| Chart.Data.Csv.map2 (\percentage data -> {data | lnp = percentage})
+       ("Liberal/National Coalition Percentage" := (String.toFloat >> Result.toMaybe >> Maybe.map Data.float))
+    <| Chart.Data.Csv.map (\division -> {division = division, alp = Nothing, lnp = Nothing})
+       ("DivisionNm" := Data.categoricalString)
 
-results : Signal.Mailbox (Result String Csv)
-results = Signal.mailbox (Err "Results haven't loaded yet")
-
-port electionData : Signal (Task () ())
-port electionData = Signal.constant electionRequest
-    |> Signal.map (\task -> (task |> Task.mapError toString |> Task.map Csv.parse |> Task.toResult)
-        `Task.andThen` Signal.send results.address)
-
-electionRequest : Task Http.Error String
-electionRequest = Http.getString "http://results.aec.gov.au/17496/Website/Downloads/HouseTppByDivisionDownload-17496.csv"
-    |> Task.map (String.lines >> List.tail >> Maybe.withDefault [] >> String.join "\n")
+type alias Election =
+    { division : Data.Categorical String
+    , alp : Maybe (Data.Number Float)
+    , lnp : Maybe (Data.Number Float)
+    }
